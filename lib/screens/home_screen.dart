@@ -1,58 +1,76 @@
+import 'package:celula_app/screens/celulas_screen.dart';
+import 'package:celula_app/screens/desarrollos_screen.dart';
+import 'package:celula_app/screens/informes_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        flexibleSpace: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Image.asset('assets/logoCefeg.png', width: 50, height: 50),
-                const Text(
-                  'Celula Cefeg',
-                  style: TextStyle(color: Colors.white, fontSize: 26),
-                ),
-                MaterialButton(
-                  onPressed: () {},
-                  color: Colors.red[500],
-                  textColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  child: const Text('Salir'),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // title: const Text('Inicio'),
-
-        // actions: [
-        //   Padding(
-        //       padding: const EdgeInsets.only(right: 10),
-        //       child:
-        //
-        //   IconButton(onPressed: () {}, icon: const Icon(Icons.exit_to_app))
-        // ],
-      ),
-      body: Container(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        onTap: (i) => null,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.groups_outlined), label: 'Celulas'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.meeting_room), label: 'Desarrollos'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.library_books_outlined), label: 'Informes'),
-        ],
+    return ChangeNotifierProvider(
+      create: (_) => _NavegacionProvider(),
+      child: const Scaffold(
+        body: _Paginas(),
+        bottomNavigationBar: _Navegacion(),
       ),
     );
   }
+}
+
+class _Navegacion extends StatelessWidget {
+  const _Navegacion({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final navegacionProvider = Provider.of<_NavegacionProvider>(context);
+    return BottomNavigationBar(
+      currentIndex: navegacionProvider.paginaActual,
+      onTap: (i) => navegacionProvider.paginaActual = i,
+      items: const [
+        BottomNavigationBarItem(
+            icon: Icon(Icons.groups_outlined), label: 'Celulas'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.meeting_room), label: 'Desarrollos'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.library_books_outlined), label: 'Informes'),
+      ],
+    );
+  }
+}
+
+class _Paginas extends StatelessWidget {
+  const _Paginas({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final navegacionProvider = Provider.of<_NavegacionProvider>(context);
+
+    return PageView(
+      physics: const NeverScrollableScrollPhysics(),
+      controller: navegacionProvider.pageController,
+      children: const <Widget>[
+        CelulasScreen(),
+        DesarrollosScreen(),
+        InformesScreen()
+      ],
+    );
+  }
+}
+
+class _NavegacionProvider with ChangeNotifier {
+  int _paginaActual = 0;
+  final PageController _pageController = PageController();
+
+  int get paginaActual => _paginaActual;
+
+  set paginaActual(int valor) {
+    _paginaActual = valor;
+    _pageController.animateToPage(_paginaActual,
+        duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    notifyListeners();
+  }
+
+  PageController get pageController => _pageController;
 }
