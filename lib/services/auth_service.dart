@@ -1,23 +1,16 @@
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:celula_app/services/notifications_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
-class AuthService extends ChangeNotifier {
-  // final String _baseUrl = 'http://127.0.0.1:3002/api/v1/';
-  final String _baseUrl = 'http://10.0.2.2:3002/api/v1/';
-
+class AuthService {
+  final String _baseUrl = dotenv.get('BASE_URL');
   final storage = const FlutterSecureStorage();
 
-  Future<String?> createUser(
-      String nombre, String usuario, String clave) async {
-    final Map<String, dynamic> authData = {
-      'nombre': nombre,
-      'usuario': usuario,
-      'clave': clave,
-      'isAdmin': false
-    };
+  Future<String?> createUser(String nombre, String usuario, String clave) async {
+    final Map<String, dynamic> authData = {'nombre': nombre, 'usuario': usuario, 'clave': clave, 'isAdmin': false};
 
     final url = Uri.parse('${_baseUrl}usuario/register');
 
@@ -35,27 +28,61 @@ class AuthService extends ChangeNotifier {
     return decodedResp['message'];
   }
 
-  Future<String?> login(String usuario, String clave) async {
-    final Map<String, dynamic> authData = {
-      'usuario': usuario,
-      'clave': clave,
-    };
+  Future<bool> login(String usuario, String clave) async {
+    try {
+      final Map<String, dynamic> authData = {'usuario': usuario, 'clave': clave};
 
-    final url = Uri.parse('${_baseUrl}usuario/login');
+      final resp = await http.post(
+        Uri.parse('${_baseUrl}usuario/login'),
+        headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8'},
+        body: json.encode(authData),
+      );
 
-    final resp = await http.post(url,
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: json.encode(authData));
-    final Map<String, dynamic> decodedResp = json.decode(resp.body);
+      final Map<String, dynamic> decodedResp = json.decode(resp.body);
 
-    if (decodedResp.containsKey('token')) {
-      await storage.write(key: 'token', value: decodedResp['token']);
-      await storage.write(key: 'nombre', value: decodedResp['nombre']);
-      return null;
+      if (resp.statusCode != 200) {
+        NotificationsService.showSnackBar(decodedResp['message']);
+        return false;
+      }
+
+      if (decodedResp.containsKey('token')) {
+        await storage.write(key: 'token', value: decodedResp['token']);
+        await storage.write(key: 'nombre', value: decodedResp['nombre']);
+        return true;
+      }
+    } catch (error) {
+      NotificationsService.showSnackBar(error.toString());
     }
-    return decodedResp['message'];
+    return false;
+  }
+
+  Future<bool> validateToken() async {
+    try {
+      final token = await readToken();
+      if (token.isEmpty) {
+        return false;
+      }
+
+      final resp = await http.post(
+        Uri.parse('${_baseUrl}usuario/verify'),
+        headers: <String, String>{'Content-Type': 'application/json; charset=UTF-8', 'Authorization': 'Bearer $token'},
+      );
+
+      final Map<String, dynamic> decodedResp = json.decode(resp.body);
+
+      if (resp.statusCode != 200) {
+        return false;
+      }
+
+      if (decodedResp.containsKey('token')) {
+        await storage.write(key: 'token', value: decodedResp['token']);
+        await storage.write(key: 'nombre', value: decodedResp['nombre']);
+        return true;
+      }
+    } catch (error) {
+      NotificationsService.showSnackBar(error.toString());
+    }
+    return false;
   }
 
   Future logout() async {
