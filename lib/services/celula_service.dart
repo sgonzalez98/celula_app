@@ -6,7 +6,7 @@ import 'package:celula_app/utilities/api_service.dart';
 class CelulaService {
   final apiService = ApiService();
 
-  Future<List<Celula>> loadCelulas() async {
+  Future<List<Celula>> load() async {
     final List<Celula> celulas = [];
     final List<dynamic> celulasMap = await apiService.get('celula?usuarioId=632e7710f490f996ad6af4c9');
 
@@ -18,30 +18,30 @@ class CelulaService {
     return celulas;
   }
 
-  Future saveOrCreateProduct(Celula celula) async {
+  Future saveOrCreate(Celula celula) async {
     if (celula.id == null) {
-      await createProduct(celula);
+      await create(celula);
     } else {
-      await updateProduct(celula);
+      await update(celula);
     }
   }
 
-  Future<String> updateProduct(Celula celula) async {
+  Future update(Celula celula) async {
     final String url = 'celula/${celula.id}';
-    celula.usuarioId = '632e7710f490f996ad6af4c9';
     celula.estado = 'Activo';
 
     await apiService.put(url, jsonEncode(celula.toJson()));
-
-    return celula.id!;
   }
 
-  Future<String> createProduct(Celula celula) async {
-    celula.usuarioId = '632e7710f490f996ad6af4c9';
+  Future create(Celula celula) async {
     final String body = jsonEncode(celula.toJson());
 
     await apiService.post('celula', body);
+  }
 
-    return celula.id!;
+  Future delete(String id) async {
+    final String url = 'celula/$id';
+
+    await apiService.delete(url);
   }
 }

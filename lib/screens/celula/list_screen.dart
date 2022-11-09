@@ -3,6 +3,7 @@ import 'package:celula_app/screens/celula/form_screen.dart';
 import 'package:celula_app/screens/celula/participante/celula_participante_screen.dart';
 import 'package:celula_app/screens/loading_screen.dart';
 import 'package:celula_app/services/celula_service.dart';
+import 'package:celula_app/services/storage_service.dart';
 import 'package:flutter/material.dart';
 
 class ListScreen extends StatefulWidget {
@@ -14,20 +15,28 @@ class ListScreen extends StatefulWidget {
 
 class _ListScreenState extends State<ListScreen> {
   final celulaService = CelulaService();
+  final storageService = StorageService();
+
   List<Celula> _celulas = [];
   bool _isLoading = true;
+  String _usuarioId = '';
 
   void loadCelulas() async {
-    _celulas = await celulaService.loadCelulas();
+    _celulas = await celulaService.load();
     setState(() {
       _isLoading = false;
     });
+  }
+
+  void loadUsuarioId() async {
+    _usuarioId = await storageService.read('usuarioId') ?? '';
   }
 
   @override
   void initState() {
     super.initState();
     loadCelulas();
+    loadUsuarioId();
   }
 
   @override
@@ -38,17 +47,18 @@ class _ListScreenState extends State<ListScreen> {
       physics: const ScrollPhysics(),
       child: Column(children: [
         MaterialButton(
-          onPressed: () {
-            Navigator.push(
+          onPressed: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => CelulaFormScreen(
                           celula: Celula(
-                        usuarioId: '1',
+                        usuarioId: _usuarioId,
                         lugar: 'Guarne',
                         hora: '',
                       ))),
             );
+            loadCelulas();
           },
           color: Colors.green,
           textColor: Colors.white,
@@ -87,18 +97,39 @@ class _ListScreenState extends State<ListScreen> {
                           color: Colors.white,
                         ),
                         IconButton(
-                          onPressed: () {
-                            Navigator.push(
+                          onPressed: () async {
+                            await Navigator.push(
                               context,
                               MaterialPageRoute(
                                   builder: ((context) => CelulaFormScreen(celula: _celulas[index].copy()))),
                             );
+                            loadCelulas();
                           },
                           icon: const Icon(Icons.edit),
                           color: Colors.white,
                         ),
                         IconButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Eliminar'),
+                                content: const Text('¿Esta seguro de eliminar esta celula?'),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () => Navigator.pop(context, 'Cancelar'),
+                                      child: const Text('Cancelar')),
+                                  TextButton(
+                                      onPressed: () async {
+                                        await celulaService.delete(_celulas[index].id!);
+                                        Navigator.pop(context, 'Aceptar');
+                                        loadCelulas();
+                                      },
+                                      child: const Text('Aceptar'))
+                                ],
+                              ),
+                            );
+                          },
                           icon: const Icon(Icons.delete),
                           color: Colors.white,
                         )

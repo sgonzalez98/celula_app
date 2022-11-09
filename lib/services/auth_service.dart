@@ -1,13 +1,13 @@
 import 'dart:convert';
 
 import 'package:celula_app/services/notifications_service.dart';
+import 'package:celula_app/services/storage_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 class AuthService {
   final String _baseUrl = dotenv.get('BASE_URL');
-  final storage = const FlutterSecureStorage();
+  final storageService = StorageService();
 
   Future<String?> createUser(String nombre, String usuario, String clave) async {
     final Map<String, dynamic> authData = {'nombre': nombre, 'usuario': usuario, 'clave': clave, 'isAdmin': false};
@@ -22,7 +22,7 @@ class AuthService {
     final Map<String, dynamic> decodedResp = json.decode(resp.body);
 
     if (decodedResp.containsKey('token')) {
-      await storage.write(key: 'token', value: decodedResp['token']);
+      await storageService.write('token', decodedResp['token']);
       return null;
     }
     return decodedResp['message'];
@@ -46,8 +46,10 @@ class AuthService {
       }
 
       if (decodedResp.containsKey('token')) {
-        await storage.write(key: 'token', value: decodedResp['token']);
-        await storage.write(key: 'nombre', value: decodedResp['nombre']);
+        await storageService.write('token', decodedResp['token']);
+        final Map<String, dynamic> userMap = decodedResp['user'];
+        await storageService.write('nombre', userMap['nombre']);
+        await storageService.write('usuarioId', userMap['id']);
         return true;
       }
     } catch (error) {
@@ -75,8 +77,11 @@ class AuthService {
       }
 
       if (decodedResp.containsKey('token')) {
-        await storage.write(key: 'token', value: decodedResp['token']);
-        await storage.write(key: 'nombre', value: decodedResp['nombre']);
+        await storageService.write('token', decodedResp['token']);
+        final Map<String, dynamic> userMap = decodedResp['user'];
+        await storageService.write('nombre', userMap['nombre']);
+        await storageService.write('usuarioId', userMap['id']);
+
         return true;
       }
     } catch (error) {
@@ -86,10 +91,10 @@ class AuthService {
   }
 
   Future logout() async {
-    await storage.delete(key: 'token');
+    await storageService.delete('token');
   }
 
   Future<String> readToken() async {
-    return await storage.read(key: 'token') ?? '';
+    return await storageService.read('token') ?? '';
   }
 }

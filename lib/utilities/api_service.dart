@@ -48,4 +48,15 @@ class ApiService {
 
     return json.decode(resp.body);
   }
+
+  Future<dynamic> delete(String url) async {
+    final completeUrl = Uri.parse('$_baseUrl$url');
+
+    final resp = await http.delete(
+      completeUrl,
+      headers: await getHeaders(),
+    );
+
+    return json.decode(resp.body);
+  }
 }
